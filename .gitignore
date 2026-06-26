@@ -1,0 +1,52 @@
+
+# Binaries for programs and plugins
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, coverage
+*.test
+coverage.out
+
+# Output of the go coverage tool
+*.out
+
+# Vendor directory
+/vendor/
+
+# Go workspace file
+go.work
+
+# Dependency directories (remove the comment to include vendor if using modules)
+# /vendor/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+
+# Environment files
+.env
+
+# Build artefacts
+build/
+dist/
+
+# miniredis/runtime or data files
+# Redis dump and AOF files that may be created during tests
+dump.rdb
+appendonly.aof
+
+# Temporary files
+*.tmp
+*.log
+PLAN.md
+plan.md
+
+# Go modules
+# Ignore modules cache (uncomment if you want to ignore GOPATH/pkg/mod)
+# $GOPATH/pkg/mod/

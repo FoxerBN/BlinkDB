@@ -1,0 +1,9 @@
+services:
+  miniredis:
+    build:
+      context: .
+    image: miniredis:local
+    container_name: miniredis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
