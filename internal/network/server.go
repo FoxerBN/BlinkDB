@@ -26,17 +26,17 @@ func (s *Server) Start() error {
 	address := fmt.Sprintf(":%s", s.port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		return fmt.Errorf("nepodarilo sa spustiť server na porte %s: %w", s.port, err)
+		return fmt.Errorf("Error starting server on port %s: %w", s.port, err)
 	}
 	defer listener.Close()
 
-	log.Printf("🔥 MiniRedis beží na porte %s. Čakám na pripojenia...", s.port)
+	log.Printf("🔥 BlinkDB is running on port %s. Waiting for connections...", s.port)
 
 	// Nekonečný loop na prijímanie klientov
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Chyba pri prijatí pripojenia: %v", err)
+			log.Printf("Error accepting connection: %v", err)
 			continue
 		}
 

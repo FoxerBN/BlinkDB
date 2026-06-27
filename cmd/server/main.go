@@ -13,6 +13,6 @@ func main() {
 	srv := network.NewServer(port, db)
 
 	if err := srv.Start(); err != nil {
-		log.Fatalf("Kritická chyba servera: %v", err)
+		log.Fatalf("Critical error: %v", err)
 	}
 }
