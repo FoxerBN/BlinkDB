@@ -24,15 +24,42 @@ type Command struct {
 // - later: support SET value with spaces
 
 func ParseCommand(input string) (*Command, error) {
+	// 1. Najprv odstranis medzery/zalamovanie na zaciatku a konci vstupu.
 	input = strings.TrimSpace(input)
+
+	// 2. Prazdny vstup nie je platny command.
 	if input == "" {
 		return nil, errors.New("invalid command")
 	}
 
+	// 3. Fields rozdeli vstup podla medzier.
+	// Priklad: "SET name Richard" -> []string{"SET", "name", "Richard"}
 	parts := strings.Fields(input)
 
+	// 4. Na velke pismena men iba nazov commandu.
+	// Argumenty nemen, lebo su to data pouzivatela.
 	name := strings.ToUpper(parts[0])
 	args := parts[1:]
+
+	// TODO: tu dopln validaciu podla name.
+	// - unknown command ma vratit error
+	// - PING, STATUS, QUIT, EXIT musia mat 0 argumentov
+	// - GET a DELETE musia mat presne 1 argument
+	// - SET musi mat presne 2 argumenty
+	// - pri GET/DELETE/SET skontroluj key cez helper alebo jednoduche if-y
+	// - key je typicky args[0], preto najprv over pocet argumentov
+	//
+	// Odporucany tvar:
+	// switch name {
+	// case "PING", "STATUS", "QUIT", "EXIT":
+	//     // skontroluj len pocet argumentov
+	// case "GET", "DELETE":
+	//     // skontroluj pocet argumentov a key
+	// case "SET":
+	//     // skontroluj pocet argumentov a key
+	// default:
+	//     // vrat unknown command error
+	// }
 
 	return &Command{
 		Name: name,
