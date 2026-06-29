@@ -66,6 +66,10 @@ func loadDotEnv(path string) {
 			_ = os.Setenv(key, value)
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return
+	}
 }
 
 // envString returns a string config value or a safe default when it is missing.

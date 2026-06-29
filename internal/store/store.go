@@ -46,3 +46,18 @@ func (s *Store) Count() int {
 
 	return len(s.data)
 }
+
+// TODO: Wire this into protocol commands or tests when key-existence checks are needed.
+func (s *Store) Exists(key string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.data[key]
+	return exists
+}
+
+// TODO: Use this from tests or future reset/admin commands.
+func (s *Store) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data = make(map[string]string)
+}
