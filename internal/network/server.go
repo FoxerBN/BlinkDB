@@ -21,9 +21,7 @@ type Options struct {
 	IdleTimeout              time.Duration
 }
 
-// Server owns the TCP listener behavior and shared runtime state. The store is
-// shared by all client goroutines, while activeClients and rateLimiter protect
-// the server from too many connections or too many commands.
+// * Server is the main network layer of BlinkDB. It listens for TCP connections and spawns a goroutine for each client.
 type Server struct {
 	port          string
 	db            *store.Store
@@ -32,7 +30,7 @@ type Server struct {
 	rateLimiter   *rateLimiter
 }
 
-// NewServer wires the database and runtime limits into the network layer.
+// * NewServer wires the database and runtime limits into the network layer.
 func NewServer(port string, db *store.Store, options Options) *Server {
 	return &Server{
 		port:        port,
@@ -42,8 +40,7 @@ func NewServer(port string, db *store.Store, options Options) *Server {
 	}
 }
 
-// Start opens the TCP port and runs the accept loop. Each accepted client gets
-// its own goroutine, which keeps the implementation simple and easy to test.
+// * Start begins listening for TCP connections and handles them until the process is terminated. It returns an error if the server cannot start.
 func (s *Server) Start() error {
 	address := fmt.Sprintf(":%s", s.port)
 	listener, err := net.Listen("tcp", address)
@@ -53,22 +50,21 @@ func (s *Server) Start() error {
 	defer listener.Close()
 
 	log.Printf("event=server_start port=%s", s.port)
-	log.Printf("event=config max_clients=%d max_value_bytes=%d global_rate_per_second=%d ip_rate_per_second=%d",
+	log.Printf("event=config max_clients=%d\n max_value_bytes=%d ip_rate_per_second=%d",
 		s.options.MaxClients,
 		s.options.MaxValueBytes,
-		s.options.GlobalRateLimitPerSecond,
 		s.options.IPRateLimitPerSecond,
 	)
 
 	for {
+		//* Accept a new connection. This is a blocking call, so the server will wait here until a client connects.
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Printf("event=accept_error error=%q", err)
 			continue
 		}
 
-		// The connection is already accepted here, so rejecting means sending a
-		// clear protocol error and closing it immediately.
+		//* Try to reserve a client slot. If the maximum number of clients is reached, reject the connection.
 		if !s.tryAddClient() {
 			_, _ = conn.Write([]byte("-ERR max clients reached\n"))
 			log.Printf("event=client_rejected reason=max_clients addr=%s active_clients=%d max_clients=%d",
@@ -84,16 +80,14 @@ func (s *Server) Start() error {
 	}
 }
 
-// tryAddClient atomically reserves a client slot. This is what makes
-// BLINKDB_MAX_CLIENTS a real runtime limit instead of just a config value.
+// * tryAddClient attempts to increment the active client count. It returns true if successful, or false if the maximum number of clients has been reached.
 func (s *Server) tryAddClient() bool {
 	if s.options.MaxClients <= 0 {
 		s.activeClients.Add(1)
 		return true
 	}
 
-	// Keep the active client counter below MaxClients even when many clients
-	// connect at the same time.
+	//* Keep the active client counter below MaxClients even when many clients connect at the same time.
 	for {
 		current := s.activeClients.Load()
 		if current >= int64(s.options.MaxClients) {
@@ -105,17 +99,17 @@ func (s *Server) tryAddClient() bool {
 	}
 }
 
-// removeClient releases the slot reserved by tryAddClient.
+// * removeClient releases the slot reserved by tryAddClient.
 func (s *Server) removeClient() {
 	s.activeClients.Add(-1)
 }
 
-// activeClientCount is used by STATUS and logs.
+// * activeClientCount is used by STATUS and logs.
 func (s *Server) activeClientCount() int64 {
 	return s.activeClients.Load()
 }
 
-// clientIP extracts the IP part from RemoteAddr for per-IP rate limiting.
+// * clientIP extracts the IP part from RemoteAddr for per-IP rate limiting.
 func clientIP(conn net.Conn) string {
 	addr := conn.RemoteAddr().String()
 	if strings.HasPrefix(addr, "[") {
@@ -132,7 +126,7 @@ func clientIP(conn net.Conn) string {
 	return ip
 }
 
-// rateLimiter tracks command counts for the whole server and for each IP.
+// * rateLimiter tracks command counts for the whole server and for each IP.
 type rateLimiter struct {
 	mu       sync.Mutex
 	global   rateBucket
@@ -141,13 +135,13 @@ type rateLimiter struct {
 	ipPS     int
 }
 
-// rateBucket stores the count for one fixed one-second window.
+//* rateBucket stores the count for one fixed one-second window.
 type rateBucket struct {
 	window time.Time
 	count  int
 }
 
-// newRateLimiter creates disabled buckets when limits are <= 0.
+//* newRateLimiter creates disabled buckets when limits are <= 0.
 func newRateLimiter(globalPS, ipPS int) *rateLimiter {
 	return &rateLimiter{
 		perIP:    make(map[string]*rateBucket),
@@ -156,15 +150,14 @@ func newRateLimiter(globalPS, ipPS int) *rateLimiter {
 	}
 }
 
-// allow returns true when the command can run now.
+//* allow returns true when the command can run now.
 func (r *rateLimiter) allow(ip string) bool {
 	now := time.Now()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// This is a simple fixed-window limiter. It is enough for this learning
-	// server and keeps the command path easy to inspect.
+	//* Check the global bucket first. If the global limit is exceeded, reject the command.
 	if r.globalPS > 0 && !allowBucket(&r.global, r.globalPS, now) {
 		return false
 	}
@@ -182,7 +175,7 @@ func (r *rateLimiter) allow(ip string) bool {
 	return allowBucket(bucket, r.ipPS, now)
 }
 
-// allowBucket resets the bucket every second and rejects calls over the limit.
+//* allowBucket resets the bucket every second and rejects calls over the limit.
 func allowBucket(bucket *rateBucket, limit int, now time.Time) bool {
 	if bucket.window.IsZero() || now.Sub(bucket.window) >= time.Second {
 		bucket.window = now

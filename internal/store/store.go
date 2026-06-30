@@ -7,6 +7,7 @@ type Store struct {
 	data map[string]string
 }
 
+//* Creates a new instance of Store with an empty data map.
 func NewStore() *Store {
 	return &Store{
 		data: make(map[string]string),

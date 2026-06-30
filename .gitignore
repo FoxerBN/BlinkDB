@@ -36,7 +36,7 @@ go.work
 build/
 dist/
 
-# miniredis/runtime or data files
+# BlinkDB runtime or data files
 # Redis dump and AOF files that may be created during tests
 dump.rdb
 appendonly.aof

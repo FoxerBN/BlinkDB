@@ -1,18 +1,18 @@
-# MiniRedis Plan
+# BlinkDB Plan
 
 - Hotove:
-  - TCP server na porte z `MINIREDIS_PORT`.
+  - TCP server na porte z `BLINKDB_PORT`.
   - In-memory key/value store so `sync.RWMutex`.
   - Prikazy `PING`, `STATUS`, `SET`, `GET`, `DELETE`, `QUIT`, `EXIT`.
   - Stress test pre vela klientov v `test/stress-test.go`.
   - Config balicek `internal/config` cita `.env`.
   - Docker Compose posiela config do kontajnera.
   - Docker Compose vie nastavit port, RAM limit a `nofile`.
-  - Server pouziva `MINIREDIS_MAX_CLIENTS`.
-  - Server pouziva `MINIREDIS_MAX_VALUE_BYTES`.
+  - Server pouziva `BLINKDB_MAX_CLIENTS`.
+  - Server pouziva `BLINKDB_MAX_VALUE_BYTES`.
   - Server pouziva read/write timeouty.
   - Server pouziva global/IP rate limit.
-  - Go runtime dostava memory target z `MINIREDIS_MEMORY_MB`.
+  - Go runtime dostava memory target z `BLINKDB_MEMORY_MB`.
   - Kod ma vysvetlujuce komentare v config, server, handler a protocol castiach.
 
 - Graceful shutdown:
@@ -57,7 +57,7 @@
   - Popisat spustenie cez `go run ./cmd/server`.
   - Popisat spustenie cez `docker compose up --build`.
   - Vypisat `.env` premenne a co realne robia.
-  - Vysvetlit rozdiel medzi `MINIREDIS_MEMORY_MB` a Docker `mem_limit`.
+  - Vysvetlit rozdiel medzi `BLINKDB_MEMORY_MB` a Docker `mem_limit`.
   - Pridat priklady cez `nc localhost 6379`.
   - Pridat zoznam podporovanych prikazov a odpovedi.
   - Pridat priklad stress testu.
