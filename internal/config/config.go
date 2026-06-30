@@ -26,15 +26,15 @@ func Load(path string) Config {
 	loadDotEnv(path)
 
 	return Config{
-		Port:                     envString("MINIREDIS_PORT", "6379"),
-		MemoryMB:                 envInt("MINIREDIS_MEMORY_MB", 256),
-		MaxClients:               envInt("MINIREDIS_MAX_CLIENTS", 10000),
-		MaxValueBytes:            envInt("MINIREDIS_MAX_VALUE_BYTES", 1048576),
-		GlobalRateLimitPerSecond: envInt("MINIREDIS_GLOBAL_RATE_LIMIT_PER_SECOND", 50000),
-		IPRateLimitPerSecond:     envInt("MINIREDIS_IP_RATE_LIMIT_PER_SECOND", 1000),
-		ReadTimeout:              envDuration("MINIREDIS_READ_TIMEOUT", 5*time.Second),
-		WriteTimeout:             envDuration("MINIREDIS_WRITE_TIMEOUT", 5*time.Second),
-		IdleTimeout:              envDuration("MINIREDIS_IDLE_TIMEOUT", 30*time.Second),
+		Port:                     envString("BLINKDB_PORT", "6379"),
+		MemoryMB:                 envInt("BLINKDB_MEMORY_MB", 256),
+		MaxClients:               envInt("BLINKDB_MAX_CLIENTS", 10000),
+		MaxValueBytes:            envInt("BLINKDB_MAX_VALUE_BYTES", 1048576),
+		GlobalRateLimitPerSecond: envInt("BLINKDB_GLOBAL_RATE_LIMIT_PER_SECOND", 50000),
+		IPRateLimitPerSecond:     envInt("BLINKDB_IP_RATE_LIMIT_PER_SECOND", 1000),
+		ReadTimeout:              envDuration("BLINKDB_READ_TIMEOUT", 30*time.Second),
+		WriteTimeout:             envDuration("BLINKDB_WRITE_TIMEOUT", 5*time.Second),
+		IdleTimeout:              envDuration("BLINKDB_IDLE_TIMEOUT", 30*time.Second),
 	}
 }
 

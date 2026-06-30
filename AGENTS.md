@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a small Go module named `miniredis`, an educational Redis-like TCP key-value server.
+This repository is a small Go module named `blinkdb`, an educational Redis-like TCP key-value server.
 
 - `cmd/server/main.go` is the executable entry point and wires the server to the in-memory store.
 - `internal/network/` contains TCP listener, connection handling, and command parsing logic.

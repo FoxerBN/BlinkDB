@@ -43,7 +43,7 @@ func runSetGetClient(cfg TestConfig, clientID int) error {
 
 	reader := bufio.NewReader(conn)
 
-	// Read the server greeting that MiniRedis sends after connect.
+	// Read the server greeting that BlinkDB sends after connect.
 	if _, err := readLine(conn, reader, cfg.Timeout); err != nil {
 		return err
 	}

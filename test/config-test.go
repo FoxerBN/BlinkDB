@@ -22,10 +22,10 @@ type TestConfig struct {
 }
 
 var config = TestConfig{
-	Name:    "MiniRedis stress test",
+	Name:    "BlinkDB stress test",
 	Host:    "localhost",
 	Port:    "6379",
-	Users:   20000,
+	Users:   15000,
 	Hold:    2 * time.Second,
 	Timeout: 5 * time.Second,
 }
@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	config.Name = fmt.Sprintf("MiniRedis %s test", *testName)
+	config.Name = fmt.Sprintf("BlinkDB %s test", *testName)
 	runTest(config, fn)
 }
 

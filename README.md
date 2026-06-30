@@ -1,8 +1,8 @@
-# miniredis
+# BlinkDB
 
-MiniRedis is a small educational TCP key-value server written in Go.
+BlinkDB is a small educational TCP key-value server written in Go.
 
-The goal of the project is to learn Go networking, goroutines, in-memory storage, simple text protocols, Docker builds, and basic load testing by building a lightweight Redis-like server from scratch.
+The goal is to learn Go networking, goroutines, in-memory storage, simple text protocols, Docker builds, and basic load testing by building a lightweight Redis-like server from scratch.
 
 ## Current Features
 
@@ -10,9 +10,8 @@ The goal of the project is to learn Go networking, goroutines, in-memory storage
 - one goroutine per client connection
 - shared in-memory store protected by `sync.RWMutex`
 - simple line-based protocol
-- `PING` command returning `+PONG`
-- `STATUS` command returning server/store status
-- `QUIT` and `EXIT` commands
+- commands: `PING`, `STATUS`, `SET`, `GET`, `EXISTS`, `DELETE`, `CLEAR`, `HELP`, `QUIT`, `EXIT`
+- configurable limits with `BLINKDB_*` environment variables
 - Docker and Docker Compose setup
 
 ## Run Locally
@@ -31,6 +30,10 @@ Example:
 
 ```text
 PING
+SET token 123456
+GET token
+EXISTS token
+HELP
 STATUS
 QUIT
 ```
@@ -49,4 +52,4 @@ docker compose down
 
 ## Status
 
-This project is in early development. `SET`, `GET`, and `DELETE` are planned next.
+This project is in early development.

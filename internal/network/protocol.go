@@ -3,7 +3,10 @@ package network
 import (
 	"errors"
 	"strings"
+	"unicode"
 )
+
+const maxKeyBytes = 512
 
 type Command struct {
 	Name string
@@ -26,12 +29,12 @@ func ParseCommand(input string) (*Command, error) {
 	args := parts[1:]
 
 	switch name {
-	case "PING", "STATUS", "QUIT", "EXIT":
+	case "PING", "STATUS", "QUIT", "EXIT", "HELP", "CLEAR":
 		// Connection/control commands are intentionally argument-free.
 		if len(args) != 0 {
 			return nil, errors.New("command expects no arguments")
 		}
-	case "GET", "DELETE":
+	case "GET", "DELETE", "EXISTS":
 		// Single-key commands need exactly one key.
 		if len(args) != 1 {
 			return nil, errors.New("command expects exactly one argument")
@@ -58,8 +61,17 @@ func ParseCommand(input string) (*Command, error) {
 	}, nil
 }
 
-// validKey is small now, but it gives us one place to add future key rules like
-// max key length or forbidden characters.
+// validKey keeps keys usable in the line-based protocol and cheap to store.
 func validKey(key string) bool {
-	return key != ""
+	if key == "" || len(key) > maxKeyBytes {
+		return false
+	}
+
+	for _, r := range key {
+		if unicode.IsSpace(r) || unicode.IsControl(r) {
+			return false
+		}
+	}
+
+	return true
 }

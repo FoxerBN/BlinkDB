@@ -1,16 +1,16 @@
 package main
 
 import (
+	"blinkdb/internal/config"
+	"blinkdb/internal/network"
+	"blinkdb/internal/store"
 	"log"
-	"miniredis/internal/config"
-	"miniredis/internal/network"
-	"miniredis/internal/store"
 	"runtime/debug"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.SetPrefix("miniredis ")
+	log.SetPrefix("blinkdb ")
 
 	cfg := config.Load(".env")
 	if cfg.MemoryMB > 0 {

@@ -85,6 +85,15 @@ func (s *Server) executeCommand(command *Command) (string, bool) {
 	case "PING":
 		return "+PONG\n", false
 
+	case "EXISTS":
+		if s.db.Exists(command.Args[0]) {
+			return "+1\n", false
+		}
+		return "+0\n", false
+
+	case "HELP":
+		return helpResponse(), false
+
 	case "STATUS":
 		return s.statusResponse(), false
 
@@ -114,12 +123,33 @@ func (s *Server) executeCommand(command *Command) (string, bool) {
 		}
 		return "+OK\n", false
 
+	case "CLEAR":
+		s.db.Clear()
+		return "+OK\n", false
+
 	case "QUIT", "EXIT":
 		return "+BYE\n", true
 
 	default:
 		return fmt.Sprintf("-ERR Unknown command: %s\n", command.Name), false
 	}
+}
+
+// helpResponse returns one protocol line per command so it is readable in nc.
+func helpResponse() string {
+	lines := []string{
+		"+Available commands:",
+		"+  PING            - Check that the server is responding.",
+		"+  STATUS          - Show active client and key counts.",
+		"+  SET key value   - Store a value for a key.",
+		"+  GET key         - Read the value stored for a key.",
+		"+  EXISTS key      - Return 1 when a key exists, otherwise 0.",
+		"+  DELETE key      - Remove a key.",
+		"+  CLEAR           - Remove all keys.",
+		"+  HELP            - Show this help message.",
+		"+  QUIT | EXIT     - Close the connection.",
+	}
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // statusResponse is shared by the initial greeting and the STATUS command.

@@ -6,16 +6,16 @@ COPY go.mod ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/miniredis ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/blinkdb ./cmd/server
 
 FROM alpine:3.22
 
-RUN adduser -D -H -s /sbin/nologin miniredis
+RUN adduser -D -H -s /sbin/nologin blinkdb
 
 WORKDIR /app
-COPY --from=build /out/miniredis /app/miniredis
+COPY --from=build /out/blinkdb /app/blinkdb
 
-USER miniredis
+USER blinkdb
 EXPOSE 6379
 
-ENTRYPOINT ["/app/miniredis"]
+ENTRYPOINT ["/app/blinkdb"]

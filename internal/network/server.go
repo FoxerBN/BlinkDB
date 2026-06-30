@@ -1,9 +1,9 @@
 package network
 
 import (
+	"blinkdb/internal/store"
 	"fmt"
 	"log"
-	"miniredis/internal/store"
 	"net"
 	"strings"
 	"sync"
@@ -85,7 +85,7 @@ func (s *Server) Start() error {
 }
 
 // tryAddClient atomically reserves a client slot. This is what makes
-// MINIREDIS_MAX_CLIENTS a real runtime limit instead of just a config value.
+// BLINKDB_MAX_CLIENTS a real runtime limit instead of just a config value.
 func (s *Server) tryAddClient() bool {
 	if s.options.MaxClients <= 0 {
 		s.activeClients.Add(1)

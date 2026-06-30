@@ -15,7 +15,7 @@ func init() {
 }
 
 func runStressClient(cfg TestConfig, _ int) error {
-	// Open one TCP connection to the running MiniRedis server.
+	// Open one TCP connection to the running BlinkDB server.
 	conn, err := net.DialTimeout("tcp", cfg.Address(), cfg.Timeout)
 	if err != nil {
 		return err
@@ -24,7 +24,7 @@ func runStressClient(cfg TestConfig, _ int) error {
 
 	reader := bufio.NewReader(conn)
 
-	// MiniRedis sends a STATUS line immediately after a client connects.
+	// BlinkDB sends a STATUS line immediately after a client connects.
 	_ = conn.SetReadDeadline(time.Now().Add(cfg.Timeout))
 	greeting, err := reader.ReadString('\n')
 	if err != nil {
