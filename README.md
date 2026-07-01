@@ -12,6 +12,9 @@ The goal is to learn Go networking, goroutines, in-memory storage, simple text p
 - simple line-based protocol
 - commands: `PING`, `STATUS`, `SET`, `GET`, `EXISTS`, `DELETE`, `CLEAR`, `HELP`, `QUIT`, `EXIT`
 - configurable limits with `BLINKDB_*` environment variables
+<!-- TODO: Add a config section that lists every BLINKDB_* variable, including
+BLINKDB_SHUTDOWN_TIMEOUT, and explain the default values used by local runs and
+Docker Compose. -->
 - Docker and Docker Compose setup
 
 ## Run Locally

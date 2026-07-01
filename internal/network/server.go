@@ -2,6 +2,7 @@ package network
 
 import (
 	"blinkdb/internal/store"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -19,6 +20,7 @@ type Options struct {
 	ReadTimeout              time.Duration
 	WriteTimeout             time.Duration
 	IdleTimeout              time.Duration
+	ShutdownTimeout          time.Duration
 }
 
 // * Server is the main network layer of BlinkDB. It listens for TCP connections and spawns a goroutine for each client.
@@ -28,6 +30,11 @@ type Server struct {
 	options       Options
 	activeClients atomic.Int64
 	rateLimiter   *rateLimiter
+	listener      net.Listener
+	mu            sync.Mutex
+	activeConns   map[net.Conn]struct{}
+	wg            sync.WaitGroup
+	shuttingDown  bool
 }
 
 // * NewServer wires the database and runtime limits into the network layer.
@@ -37,6 +44,7 @@ func NewServer(port string, db *store.Store, options Options) *Server {
 		db:          db,
 		options:     options,
 		rateLimiter: newRateLimiter(options.GlobalRateLimitPerSecond, options.IPRateLimitPerSecond),
+		activeConns: make(map[net.Conn]struct{}),
 	}
 }
 
@@ -48,8 +56,18 @@ func (s *Server) Start() error {
 		return fmt.Errorf("error starting server on port %s: %w", s.port, err)
 	}
 	defer listener.Close()
+	s.mu.Lock()
+	if s.shuttingDown {
+		s.mu.Unlock()
+		return nil
+	}
+	s.listener = listener
+	s.mu.Unlock()
 
 	log.Printf("event=server_start port=%s", s.port)
+	// TODO: Keep this config log on one physical line. Remove the embedded
+	// newline and log every key/value pair in one log.Printf call so each log
+	// entry keeps the blinkdb prefix and remains easy to parse.
 	log.Printf("event=config max_clients=%d\n max_value_bytes=%d ip_rate_per_second=%d",
 		s.options.MaxClients,
 		s.options.MaxValueBytes,
@@ -60,6 +78,9 @@ func (s *Server) Start() error {
 		//* Accept a new connection. This is a blocking call, so the server will wait here until a client connects.
 		conn, err := listener.Accept()
 		if err != nil {
+			if s.isShuttingDown() || errors.Is(err, net.ErrClosed) {
+				return nil
+			}
 			log.Printf("event=accept_error error=%q", err)
 			continue
 		}
@@ -75,8 +96,88 @@ func (s *Server) Start() error {
 			_ = conn.Close()
 			continue
 		}
+		if !s.addConnection(conn) {
+			s.removeClient()
+			_ = conn.Close()
+			continue
+		}
 
-		go s.handleConnection(conn)
+		go func() {
+			defer s.wg.Done()
+			defer s.removeConnection(conn)
+			s.handleConnection(conn)
+		}()
+	}
+}
+
+// Shutdown gracefully stops the server. It closes the listener first so Accept
+// unblocks, waits briefly for active clients to finish, then closes any
+// remaining connections.
+func (s *Server) Shutdown() {
+	s.mu.Lock()
+	if s.shuttingDown {
+		s.mu.Unlock()
+		return
+	}
+	s.shuttingDown = true
+	listener := s.listener
+	s.mu.Unlock()
+
+	log.Printf("event=shutdown_start")
+
+	if listener != nil {
+		_ = listener.Close()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+
+	timeout := s.options.ShutdownTimeout
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+
+	select {
+	case <-done:
+	case <-time.After(timeout):
+		s.closeActiveConnections()
+		<-done
+	}
+
+	log.Printf("event=shutdown_done")
+}
+
+func (s *Server) isShuttingDown() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shuttingDown
+}
+
+func (s *Server) addConnection(conn net.Conn) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.shuttingDown {
+		return false
+	}
+	s.activeConns[conn] = struct{}{}
+	s.wg.Add(1)
+	return true
+}
+
+func (s *Server) removeConnection(conn net.Conn) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.activeConns, conn)
+}
+
+func (s *Server) closeActiveConnections() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for conn := range s.activeConns {
+		_ = conn.Close()
 	}
 }
 
@@ -128,20 +229,24 @@ func clientIP(conn net.Conn) string {
 
 // * rateLimiter tracks command counts for the whole server and for each IP.
 type rateLimiter struct {
-	mu       sync.Mutex
-	global   rateBucket
+	mu     sync.Mutex
+	global rateBucket
+	// TODO: Expire old per-IP buckets so many one-off IP addresses cannot grow
+	// this map forever. Add a lastSeen timestamp to each bucket, then either
+	// delete stale entries inside allow() occasionally or run a small cleanup
+	// method on a ticker owned by Server.
 	perIP    map[string]*rateBucket
 	globalPS int
 	ipPS     int
 }
 
-//* rateBucket stores the count for one fixed one-second window.
+// * rateBucket stores the count for one fixed one-second window.
 type rateBucket struct {
 	window time.Time
 	count  int
 }
 
-//* newRateLimiter creates disabled buckets when limits are <= 0.
+// * newRateLimiter creates disabled buckets when limits are <= 0.
 func newRateLimiter(globalPS, ipPS int) *rateLimiter {
 	return &rateLimiter{
 		perIP:    make(map[string]*rateBucket),
@@ -150,7 +255,7 @@ func newRateLimiter(globalPS, ipPS int) *rateLimiter {
 	}
 }
 
-//* allow returns true when the command can run now.
+// * allow returns true when the command can run now.
 func (r *rateLimiter) allow(ip string) bool {
 	now := time.Now()
 
@@ -175,7 +280,7 @@ func (r *rateLimiter) allow(ip string) bool {
 	return allowBucket(bucket, r.ipPS, now)
 }
 
-//* allowBucket resets the bucket every second and rejects calls over the limit.
+// * allowBucket resets the bucket every second and rejects calls over the limit.
 func allowBucket(bucket *rateBucket, limit int, now time.Time) bool {
 	if bucket.window.IsZero() || now.Sub(bucket.window) >= time.Second {
 		bucket.window = now

@@ -5,7 +5,10 @@ import (
 	"blinkdb/internal/network"
 	"blinkdb/internal/store"
 	"log"
+	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 )
 
 func main() {
@@ -26,9 +29,28 @@ func main() {
 		ReadTimeout:              cfg.ReadTimeout,
 		WriteTimeout:             cfg.WriteTimeout,
 		IdleTimeout:              cfg.IdleTimeout,
+		ShutdownTimeout:          cfg.ShutdownTimeout,
 	})
 
-	if err := srv.Start(); err != nil {
-		log.Fatalf("Critical error: %v", err)
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Start()
+	}()
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(signalCh)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			log.Fatalf("Critical error: %v", err)
+		}
+	case sig := <-signalCh:
+		log.Printf("event=shutdown_signal signal=%s", sig)
+		srv.Shutdown()
+		if err := <-errCh; err != nil {
+			log.Fatalf("Critical error: %v", err)
+		}
 	}
 }
