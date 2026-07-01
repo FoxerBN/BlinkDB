@@ -10,10 +10,12 @@ import (
 
 const stressCommand = "STATUS"
 
+//* init registers the stress scenario at startup.
 func init() {
 	registerTest("stress", runStressClient)
 }
 
+//* runStressClient connects, sends STATUS, validates the reply, and holds the connection.
 func runStressClient(cfg TestConfig, _ int) error {
 	// Open one TCP connection to the running BlinkDB server.
 	conn, err := net.DialTimeout("tcp", cfg.Address(), cfg.Timeout)
@@ -59,6 +61,7 @@ func runStressClient(cfg TestConfig, _ int) error {
 	return err
 }
 
+//* validStressResponse reports whether a STATUS reply is a success line.
 func validStressResponse(response string) bool {
 	response = strings.TrimSpace(response)
 	return strings.HasPrefix(response, "+STATUS OK")

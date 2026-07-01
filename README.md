@@ -1,20 +1,19 @@
 # BlinkDB
 
-BlinkDB is a small educational TCP key-value server written in Go.
+BlinkDB is a small educational TCP key-value server written in Go — a lightweight,
+Redis-like server built from scratch to learn Go networking, goroutines, in-memory
+storage, simple text protocols, Docker, and load testing.
 
-The goal is to learn Go networking, goroutines, in-memory storage, simple text protocols, Docker builds, and basic load testing by building a lightweight Redis-like server from scratch.
+## Features
 
-## Current Features
-
-- TCP server listening on port `6379`
-- one goroutine per client connection
-- shared in-memory store protected by `sync.RWMutex`
-- simple line-based protocol
-- commands: `PING`, `STATUS`, `SET`, `GET`, `EXISTS`, `DELETE`, `CLEAR`, `HELP`, `QUIT`, `EXIT`
-- configurable limits with `BLINKDB_*` environment variables
-<!-- TODO: Add a config section that lists every BLINKDB_* variable, including
-BLINKDB_SHUTDOWN_TIMEOUT, and explain the default values used by local runs and
-Docker Compose. -->
+- TCP server, one goroutine per client connection
+- Shared in-memory store protected by `sync.RWMutex`
+- Simple line-based text protocol (works with `nc` / `telnet`)
+- Commands: `PING`, `STATUS`, `SET`, `GET`, `EXISTS`, `DELETE`, `CLEAR`, `HELP`, `QUIT`, `EXIT`
+- `STATUS` reports live client count, key count, and runtime memory usage
+- Per-server and per-IP rate limiting with automatic cleanup of stale IP buckets
+- Configurable limits and timeouts via `BLINKDB_*` environment variables
+- Graceful shutdown on `SIGINT` / `SIGTERM`
 - Docker and Docker Compose setup
 
 ## Run Locally
@@ -29,30 +28,54 @@ In another terminal:
 nc localhost 6379
 ```
 
-Example:
+Example session:
 
 ```text
 PING
 SET token 123456
 GET token
 EXISTS token
-HELP
+DELETE token
+CLEAR
 STATUS
+HELP
 QUIT
 ```
 
 ## Run With Docker
 
 ```bash
-docker compose up --build
+docker compose up --build   # start
+docker compose down         # stop
 ```
 
-Stop the server:
+## Configuration
+
+All settings are read from environment variables (loaded from `.env` if present).
+Values accept Go durations (`30s`, `5m`) or plain seconds (`30`) for timeouts.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `BLINKDB_PORT` | `6379` | TCP listen port |
+| `BLINKDB_MEMORY_MB` | `256` | Go runtime soft memory target (`debug.SetMemoryLimit`) |
+| `BLINKDB_MAX_CLIENTS` | `15000` | Max concurrent connections (0 = unlimited) |
+| `BLINKDB_MAX_VALUE_BYTES` | `1048576` | Max size of a single value (0 = unlimited) |
+| `BLINKDB_GLOBAL_RATE_LIMIT_PER_SECOND` | `50000` | Server-wide command rate cap (0 = off) |
+| `BLINKDB_IP_RATE_LIMIT_PER_SECOND` | `15000` | Per-IP command rate cap (0 = off) |
+| `BLINKDB_READ_TIMEOUT` | `30s` | Fallback read deadline when idle timeout is unset |
+| `BLINKDB_WRITE_TIMEOUT` | `5s` | Deadline for writing a response |
+| `BLINKDB_IDLE_TIMEOUT` | `30s` | How long a client may stay silent before disconnect |
+| `BLINKDB_SHUTDOWN_TIMEOUT` | `5s` | Grace period for connections to finish on shutdown |
+
+## Tests
 
 ```bash
-docker compose down
+go test ./test/                  # unit tests
+cd test && go run . -test stress # manual load test (server must be running)
 ```
 
 ## Status
 
-This project is in early development.
+Early development / learning project.
+</content>
+</invoke>

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 )
 
-// handleConnection owns one client connection from connect to disconnect.
-// It reads line-based commands, executes them, and writes line-based responses.
+//* handleConnection reads, executes, and replies to commands for one client until it disconnects.
 func (s *Server) handleConnection(conn net.Conn) {
 	clientAddr := conn.RemoteAddr().String()
 	ip := clientIP(conn)
@@ -78,8 +78,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 }
 
-// executeCommand is the bridge between parsed protocol commands and store
-// operations. The bool return tells the caller whether the connection should close.
+//* executeCommand runs a validated command and returns its response and whether to close the connection.
 func (s *Server) executeCommand(command *Command) (string, bool) {
 	switch command.Name {
 	case "PING":
@@ -100,8 +99,8 @@ func (s *Server) executeCommand(command *Command) (string, bool) {
 	case "SET":
 		key := command.Args[0]
 		value := command.Args[1]
-		if s.options.MaxValueBytes > 0 && len(value) > s.options.MaxValueBytes {
-			return "-ERR value too large\n", false
+		if err := s.checkValueSize(value); err != nil {
+			return fmt.Sprintf("-ERR %v\n", err), false
 		}
 
 		s.db.Set(key, value)
@@ -135,7 +134,7 @@ func (s *Server) executeCommand(command *Command) (string, bool) {
 	}
 }
 
-// helpResponse returns one protocol line per command so it is readable in nc.
+//* helpResponse returns one protocol line per command so it is readable in nc.
 func helpResponse() string {
 	lines := []string{
 		"+Available commands:",
@@ -152,12 +151,20 @@ func helpResponse() string {
 	return strings.Join(lines, "\n") + "\n"
 }
 
-// statusResponse is shared by the initial greeting and the STATUS command.
+//* statusResponse builds the STATUS line (clients, keys, memory) for greeting and STATUS.
 func (s *Server) statusResponse() string {
-	return fmt.Sprintf("+STATUS OK clients=%d keys=%d\n", s.activeClientCount(), s.db.Count())
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return fmt.Sprintf(
+		"+STATUS OK clients=%d keys=%d mem_used_mb=%.2f mem_sys_mb=%.2f\n",
+		s.activeClientCount(),
+		s.db.Count(),
+		float64(m.Alloc)/(1024*1024),
+		float64(m.Sys)/(1024*1024),
+	)
 }
 
-// writeResponse applies the configured write timeout before writing to the socket.
+//* writeResponse applies the write timeout and writes one reply to the socket.
 func (s *Server) writeResponse(conn net.Conn, response string) bool {
 	s.setWriteDeadline(conn)
 	if _, err := conn.Write([]byte(response)); err != nil {
@@ -167,21 +174,21 @@ func (s *Server) writeResponse(conn net.Conn, response string) bool {
 	return true
 }
 
-// setReadDeadline protects the server from clients that connect but stop sending data.
+//* setReadDeadline bounds the wait for the next command (idle timeout).
 func (s *Server) setReadDeadline(conn net.Conn) {
-	timeout := s.options.ReadTimeout
+	timeout := s.options.IdleTimeout
 	if timeout <= 0 {
-		timeout = s.options.IdleTimeout
+		timeout = s.options.ReadTimeout
 	}
 	setDeadline(conn, timeout, conn.SetReadDeadline)
 }
 
-// setWriteDeadline protects the server from clients that stop reading responses.
+//* setWriteDeadline protects the server from clients that stop reading responses.
 func (s *Server) setWriteDeadline(conn net.Conn) {
 	setDeadline(conn, s.options.WriteTimeout, conn.SetWriteDeadline)
 }
 
-// setDeadline centralizes deadline handling for read and write paths.
+//* setDeadline centralizes deadline handling for read and write paths.
 func setDeadline(conn net.Conn, timeout time.Duration, setter func(time.Time) error) {
 	if timeout <= 0 {
 		return
@@ -191,8 +198,15 @@ func setDeadline(conn net.Conn, timeout time.Duration, setter func(time.Time) er
 	}
 }
 
-// maxCommandBytes gives Scanner enough room for "SET key value" plus protocol
-// overhead while still enforcing a configured upper bound.
+//* checkValueSize rejects a single value larger than the configured MaxValueBytes.
+func (s *Server) checkValueSize(value string) error {
+	if s.options.MaxValueBytes > 0 && len(value) > s.options.MaxValueBytes {
+		return fmt.Errorf("value exceeds max size of %d bytes", s.options.MaxValueBytes)
+	}
+	return nil
+}
+
+//* maxCommandBytes returns the max bytes accepted for one command line.
 func (s *Server) maxCommandBytes() int {
 	if s.options.MaxValueBytes <= 0 {
 		return 1024 * 1024

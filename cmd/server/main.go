@@ -11,6 +11,7 @@ import (
 	"syscall"
 )
 
+//* main wires config, store, and network server together and blocks until shutdown.
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetPrefix("blinkdb ")

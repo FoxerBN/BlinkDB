@@ -13,17 +13,15 @@ type Command struct {
 	Args []string
 }
 
-// ParseCommand turns one text line from the TCP connection into a validated
-// command. It does not execute anything; it only checks command shape.
+//* ParseCommand takes a raw input string and returns a Command struct if the input is valid.
 func ParseCommand(input string) (*Command, error) {
-	// Ignore spaces around the command so "  ping  " still behaves like PING.
+	//* Trim whitespace and check for empty input.
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return nil, errors.New("empty command")
 	}
 
-	// Fields splits by whitespace. For now SET values cannot contain spaces;
-	// supporting that later will require special parsing for SET.
+	//* Split the input into parts and validate the command name.
 	parts := strings.Fields(input)
 	name := strings.ToUpper(parts[0])
 	args := parts[1:]
@@ -35,7 +33,7 @@ func ParseCommand(input string) (*Command, error) {
 			return nil, errors.New("command expects no arguments")
 		}
 	case "GET", "DELETE", "EXISTS":
-		// Single-key commands need exactly one key.
+		//* Single-key commands need exactly one key.
 		if len(args) != 1 {
 			return nil, errors.New("command expects exactly one argument")
 		}
@@ -43,7 +41,7 @@ func ParseCommand(input string) (*Command, error) {
 			return nil, errors.New("invalid key")
 		}
 	case "SET":
-		// SET currently accepts exactly one key and one value token.
+		//* SET currently accepts exactly one key and one value token.
 		if len(args) != 2 {
 			return nil, errors.New("command expects exactly two arguments")
 		}
@@ -61,7 +59,7 @@ func ParseCommand(input string) (*Command, error) {
 	}, nil
 }
 
-// validKey keeps keys usable in the line-based protocol and cheap to store.
+//* validKey keeps keys usable in the line-based protocol and cheap to store.
 func validKey(key string) bool {
 	if key == "" || len(key) > maxKeyBytes {
 		return false

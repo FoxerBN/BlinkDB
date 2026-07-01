@@ -34,6 +34,7 @@ type testFunc func(TestConfig, int) error
 
 var tests = map[string]testFunc{}
 
+//* main selects a load-test scenario by the -test flag and runs it.
 func main() {
 	testName := flag.String("test", "stress", "test to run")
 	flag.Parse()
@@ -49,17 +50,17 @@ func main() {
 	runTest(config, fn)
 }
 
-// registerTest makes a scenario runnable with: go run . -test <name>.
+//* registerTest makes a scenario runnable with: go run . -test <name>.
 func registerTest(name string, fn testFunc) {
 	tests[name] = fn
 }
 
-// Address returns the TCP address used by net.Dial.
+//* Address returns the TCP address used by net.Dial.
 func (c TestConfig) Address() string {
 	return net.JoinHostPort(c.Host, c.Port)
 }
 
-// runTest wraps one concrete scenario with shared start/end logs and counters.
+//* runTest wraps one scenario with shared start/end logs, counters, and goroutines.
 func runTest(cfg TestConfig, fn testFunc) {
 	var processed atomic.Int64
 	var failed atomic.Int64
@@ -100,6 +101,7 @@ func runTest(cfg TestConfig, fn testFunc) {
 	fmt.Printf("rate processed_per_second=%.2f\n", float64(processed.Load())/elapsed.Seconds())
 }
 
+//* testNames returns the registered scenario names, sorted, for error output.
 func testNames() []string {
 	names := make([]string, 0, len(tests))
 	for name := range tests {

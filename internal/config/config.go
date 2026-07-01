@@ -21,8 +21,7 @@ type Config struct {
 	ShutdownTimeout          time.Duration
 }
 
-// Load reads .env values first, then converts environment variables into the
-// typed config used by the rest of the application.
+//* Load reads .env first, then converts environment variables into a typed Config.
 func Load(path string) Config {
 	loadDotEnv(path)
 
@@ -40,9 +39,7 @@ func Load(path string) Config {
 	}
 }
 
-// loadDotEnv keeps local development simple: go run ./cmd/server can use the
-// same .env file as Docker Compose. Real environment variables win over .env,
-// so Docker or shell overrides still work.
+//* loadDotEnv reads a .env file and sets environment variables for any key/value pairs that are not already set in the environment.
 func loadDotEnv(path string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -74,7 +71,7 @@ func loadDotEnv(path string) {
 	}
 }
 
-// envString returns a string config value or a safe default when it is missing.
+//* envString returns a string config value or a safe default when it is missing.
 func envString(key, fallback string) string {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -83,7 +80,7 @@ func envString(key, fallback string) string {
 	return value
 }
 
-// envInt parses numeric config like memory MB, max clients, and rate limits.
+//* envInt parses numeric config like memory MB, max clients, and rate limits.
 func envInt(key string, fallback int) int {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
@@ -97,7 +94,7 @@ func envInt(key string, fallback int) int {
 	return parsed
 }
 
-// envDuration accepts Go durations like "5s" and also plain seconds like "5".
+//* envDuration accepts Go durations like "5s" and also plain seconds like "5".
 func envDuration(key string, fallback time.Duration) time.Duration {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {

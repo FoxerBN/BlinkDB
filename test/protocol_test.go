@@ -7,6 +7,7 @@ import (
 	"blinkdb/internal/network"
 )
 
+//* TestParseCommandValidatesKeys checks key validation and argument rules.
 func TestParseCommandValidatesKeys(t *testing.T) {
 	longKey := strings.Repeat("a", 513)
 
@@ -25,26 +26,28 @@ func TestParseCommandValidatesKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := network.ParseCommand(tt.input)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("ParseCommand(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				t.Fatalf("network.ParseCommand(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
 			}
 		})
 	}
 }
 
+//* TestParseCommandAcceptsHelp checks that HELP parses with no arguments.
 func TestParseCommandAcceptsHelp(t *testing.T) {
 	command, err := network.ParseCommand("HELP")
 	if err != nil {
-		t.Fatalf("ParseCommand(HELP) error = %v", err)
+		t.Fatalf("network.ParseCommand(HELP) error = %v", err)
 	}
 	if command.Name != "HELP" {
 		t.Fatalf("command.Name = %q, want HELP", command.Name)
 	}
 }
 
+//* TestParseCommandAcceptsExists checks that EXISTS parses its single key argument.
 func TestParseCommandAcceptsExists(t *testing.T) {
 	command, err := network.ParseCommand("EXISTS token")
 	if err != nil {
-		t.Fatalf("ParseCommand(EXISTS token) error = %v", err)
+		t.Fatalf("network.ParseCommand(EXISTS token) error = %v", err)
 	}
 	if command.Name != "EXISTS" {
 		t.Fatalf("command.Name = %q, want EXISTS", command.Name)

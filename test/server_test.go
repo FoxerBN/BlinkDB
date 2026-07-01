@@ -1,4 +1,4 @@
-package network
+package main
 
 import (
 	"bufio"
@@ -6,11 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"blinkdb/internal/network"
 	"blinkdb/internal/store"
 )
 
+//* TestShutdownStopsServerAndClosesIdleClients verifies Shutdown closes idle clients.
 func TestShutdownStopsServerAndClosesIdleClients(t *testing.T) {
-	srv := NewServer("0", store.NewStore(), Options{
+	srv := network.NewServer("0", store.NewStore(), network.Options{
 		ShutdownTimeout: 25 * time.Millisecond,
 	})
 
@@ -19,8 +21,8 @@ func TestShutdownStopsServerAndClosesIdleClients(t *testing.T) {
 		errCh <- srv.Start()
 	}()
 
-	listener := waitForListener(t, srv, errCh)
-	conn, err := net.DialTimeout("tcp", listener.Addr().String(), time.Second)
+	addr := waitForAddr(t, srv, errCh)
+	conn, err := net.DialTimeout("tcp", addr, time.Second)
 	if err != nil {
 		t.Fatalf("DialTimeout() error = %v", err)
 	}
@@ -59,7 +61,8 @@ func TestShutdownStopsServerAndClosesIdleClients(t *testing.T) {
 	}
 }
 
-func waitForListener(t *testing.T, srv *Server, errCh <-chan error) net.Listener {
+//* waitForAddr polls Server.Addr() until the listener is bound and returns its address.
+func waitForAddr(t *testing.T, srv *network.Server, errCh <-chan error) string {
 	t.Helper()
 
 	deadline := time.After(time.Second)
@@ -67,11 +70,8 @@ func waitForListener(t *testing.T, srv *Server, errCh <-chan error) net.Listener
 	defer ticker.Stop()
 
 	for {
-		srv.mu.Lock()
-		listener := srv.listener
-		srv.mu.Unlock()
-		if listener != nil {
-			return listener
+		if addr := srv.Addr(); addr != nil {
+			return addr.String()
 		}
 
 		select {
